@@ -1,5 +1,7 @@
 package entities.plants;
 
+import java.util.ArrayList;
+import java.util.List;
 import core.Environment;
 import core.Position;
 import entities.LivingEntity;
@@ -10,20 +12,11 @@ import interfaces.Reproducible;
 /**
  * Student 1: Shir Yehudai 212712194
  * Student 2: Orin Medina 211564935
- * Plant entity in the ecosystem - can be a generic plant or subclassed (Flower, OakTree).
- * Implements growth, energy management, and reproduction behaviors.
+ * Abstract base class for all plant entities in the ecosystem.
  */
-public class Plant extends LivingEntity implements Consumable, Reproducible, EdibleByHerbivore {
+public abstract class Plant extends LivingEntity implements Consumable, Reproducible, EdibleByHerbivore {
     private double growthRate;
     private double reproductionChance;
-
-    /**
-     * Creates a new plant with default parameters.
-     * @param position the plant position
-     */
-    public Plant(Position position) {
-        this(position, 'P', 40, 40, 2.0, 0.3);
-    }
 
     /**
      * Creates a new plant.
@@ -86,6 +79,7 @@ public class Plant extends LivingEntity implements Consumable, Reproducible, Edi
     /**
      * Performs one plant action in the current tick.
      * Plants age, gain energy by growth rate up to max energy, and then attempt reproduction.
+     * Plants do not lose the per-tick energy that other living entities do.
      * @param env the simulation environment
      * @return true if the action completed, false otherwise
      */
@@ -112,45 +106,30 @@ public class Plant extends LivingEntity implements Consumable, Reproducible, Edi
     }
 
     /**
-     * Attempts to reproduce if conditions are met.
-     * Plants reproduce when energy is high enough and random chance succeeds.
+     * Collects the free cells within the given Manhattan distance of this plant.
+     * Helper used by subclasses to place offspring during reproduction.
      * @param env the simulation environment
-     * @return true if reproduction attempt was made
+     * @param maxDistance the maximum Manhattan distance from this plant
+     * @return a list of free positions within the distance
      */
-    @Override
-    public boolean reproduce(Environment env) {
-        if (env == null || !isAlive()) {
-            return false;
-        }
-
-       
-        if (getEnergy() >= getMaxEnergy() * 0.8 && Math.random() < this.reproductionChance) {
-            // Find a random free position
-            Position newPosition = null;
-            int attempts = 0;
-            while (newPosition == null && attempts < 10) {
-                int row = (int) (Math.random() * env.getRows());
-                int col = (int) (Math.random() * env.getCols());
-                Position candidate = new Position(row, col);
-                if (env.isPositionFree(candidate)) {
-                    newPosition = candidate;
+    protected List<Position> freeCellsWithin(Environment env, int maxDistance) {
+        List<Position> cells = new ArrayList<>();
+        for (int dr = -maxDistance; dr <= maxDistance; dr++) {
+            for (int dc = -maxDistance; dc <= maxDistance; dc++) {
+                if (dr == 0 && dc == 0) {
+                    continue;
                 }
-                attempts++;
-            }
-
-            
-            if (newPosition != null) {
-                Plant offspring = new Plant(newPosition, this.getSymbol(), getMaxEnergy() * 0.5, 
-                                           getMaxEnergy() * 0.5, this.growthRate, this.reproductionChance);
-                env.addEntity(offspring);
-                
-                
-                setEnergy(getEnergy() * 0.7);
-                return true;
+                if (Math.abs(dr) + Math.abs(dc) > maxDistance) {
+                    continue;
+                }
+                Position candidate = new Position(getPosition().getRow() + dr,
+                                                  getPosition().getCol() + dc);
+                if (env.isPositionFree(candidate)) {
+                    cells.add(candidate);
+                }
             }
         }
-
-        return false;
+        return cells;
     }
 
     /**
@@ -201,4 +180,3 @@ public class Plant extends LivingEntity implements Consumable, Reproducible, Edi
                 + "<" + isAlive() + ">";
     }
 }
-

@@ -10,7 +10,6 @@ import entities.animals.Lion;
 import entities.animals.Rabbit;
 import entities.plants.Flower;
 import entities.plants.OakTree;
-import entities.plants.Plant;
 import entities.resources.Rock;
 import entities.resources.Water;
 import interfaces.EcosystemObserver;
@@ -94,11 +93,6 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
     private JLabel oakLabel;
 
     /**
-     * Label displaying the number of plants.
-     */
-    private JLabel plantLabel;
-
-    /**
      * Label displaying the total energy in the simulation.
      */
     private JLabel energyLabel;
@@ -165,8 +159,7 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
         environment.addEntity(new Rabbit(new Position(6, 7)));
         environment.addEntity(new Flower(new Position(7, 0)));
         environment.addEntity(new Flower(new Position(7, 4)));
-        environment.addEntity(new Plant(new Position(3, 2)));
-        environment.addEntity(new Plant(new Position(8, 2)));
+        environment.addEntity(new Flower(new Position(3, 2)));
         environment.addEntity(new OakTree(new Position(1, 5)));
         environment.addEntity(new OakTree(new Position(6, 3)));
         environment.addEntity(new Water(new Position(5, 4)));

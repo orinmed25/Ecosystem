@@ -1,5 +1,6 @@
 package entities.plants;
 
+import java.util.List;
 import core.Environment;
 import core.Position;
 
@@ -19,13 +20,26 @@ public class OakTree extends Plant {
     }
 
     /**
-     * Attempts to reproduce an oak tree in a nearby free cell.
+     * Attempts to reproduce a new oak tree in a free cell at Manhattan distance 1.
      * @param env the simulation environment
-     * @return true if reproduction succeeded, false otherwise
+     * @return true if an oak tree was created, false otherwise
      */
     @Override
     public boolean reproduce(Environment env) {
-        return false;
+        if (env == null || !isAlive()) {
+            return false;
+        }
+        if (Math.random() >= getReproductionChance()) {
+            return false;
+        }
+
+        List<Position> free = freeCellsWithin(env, 1);
+        if (free.isEmpty()) {
+            return false;
+        }
+
+        Position spot = free.get((int) (Math.random() * free.size()));
+        return env.addEntity(new OakTree(spot));
     }
 
     /**

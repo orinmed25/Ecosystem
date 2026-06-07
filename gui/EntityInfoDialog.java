@@ -6,7 +6,6 @@ import entities.AbstractEntity;
 import entities.animals.Deer;
 import entities.animals.Lion;
 import entities.animals.Rabbit;
-import entities.plants.Plant;
 import entities.plants.Flower;
 import entities.plants.OakTree;
 import entities.resources.Rock;
@@ -161,7 +160,6 @@ public class EntityInfoDialog extends JDialog {
             case "OakTree": return new OakTree(pos);
             case "Rock":    return new Rock(pos);
             case "Water":   return new Water(pos);
-            case "Plant":   return new Plant(pos);
             default:        return null;
         }
     }

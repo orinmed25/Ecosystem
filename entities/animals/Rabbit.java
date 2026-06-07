@@ -41,13 +41,45 @@ public class Rabbit extends Animal implements Reproducible {
     }
 
     /**
-     * Attempts to reproduce a new rabbit in a nearby free cell.
+     * Attempts to reproduce a new rabbit in an adjacent free cell.
      * @param env the simulation environment
      * @return true if reproduction succeeded, false otherwise
      */
     @Override
     public boolean reproduce(Environment env) {
-        return false;
+        if (env == null || !isAlive()) {
+            return false;
+        }
+
+        int[] dr = {-1, 1, 0, 0};
+        int[] dc = {0, 0, -1, 1};
+        java.util.List<Position> free = new java.util.ArrayList<>();
+        for (int i = 0; i < dr.length; i++) {
+            Position candidate = new Position(getPosition().getRow() + dr[i],
+                                              getPosition().getCol() + dc[i]);
+            if (env.isPositionFree(candidate)) {
+                free.add(candidate);
+            }
+        }
+
+        if (free.isEmpty()) {
+            return false;
+        }
+
+        Position spot = free.get((int) (Math.random() * free.size()));
+        Rabbit offspring = new Rabbit(spot);
+        if (!env.addEntity(offspring)) {
+            return false;
+        }
+
+        // Reproduction splits the parent's energy with the offspring (energy is
+        // conserved). This makes the energy>30 threshold meaningful: after breeding
+        // the parent drops below it and must eat again before reproducing, so the
+        // population stays bounded by the available food.
+        double shared = getEnergy() / 2;
+        offspring.setEnergy(shared);
+        setEnergy(shared);
+        return true;
     }
 
     /**

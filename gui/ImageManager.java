@@ -6,7 +6,6 @@ import entities.animals.Rabbit;
 import entities.animals.Lion;
 import entities.plants.Flower;
 import entities.plants.OakTree;
-import entities.plants.Plant;
 import entities.resources.Rock;
 import entities.resources.Water;
 
@@ -75,7 +74,6 @@ public class ImageManager {
             "icons8-lion-100.png",
             "icons8-flower-100.png",
             "icons8-oak-tree-100.png",
-            "icons8-plant-100.png",
             "icons8-rock-100.png",
             "icons8-water-100.png"
         };
@@ -107,7 +105,6 @@ public class ImageManager {
         if (entity instanceof Lion)    return "icons8-lion-100.png";
         if (entity instanceof Flower)  return "icons8-flower-100.png";
         if (entity instanceof OakTree) return "icons8-oak-tree-100.png";
-        if (entity instanceof Plant)   return "icons8-plant-100.png";
         if (entity instanceof Rock)    return "icons8-rock-100.png";
         if (entity instanceof Water)   return "icons8-water-100.png";
         return null;

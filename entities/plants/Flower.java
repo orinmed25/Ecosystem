@@ -1,5 +1,7 @@
 package entities.plants;
 
+import java.util.Collections;
+import java.util.List;
 import core.Environment;
 import core.Position;
 
@@ -19,13 +21,33 @@ public class Flower extends Plant {
     }
 
     /**
-     * Attempts to reproduce one to three flowers in nearby free cells.
+     * Attempts to reproduce one to three flowers in free cells at Manhattan distance up to 2.
      * @param env the simulation environment
-     * @return true if reproduction succeeded, false otherwise
+     * @return true if at least one flower was created, false otherwise
      */
     @Override
     public boolean reproduce(Environment env) {
-        return false;
+        if (env == null || !isAlive()) {
+            return false;
+        }
+        if (Math.random() >= getReproductionChance()) {
+            return false;
+        }
+
+        List<Position> free = freeCellsWithin(env, 2);
+        if (free.isEmpty()) {
+            return false;
+        }
+
+        Collections.shuffle(free);
+        int count = 1 + (int) (Math.random() * 3);
+        int created = 0;
+        for (int i = 0; i < free.size() && created < count; i++) {
+            if (env.addEntity(new Flower(free.get(i)))) {
+                created++;
+            }
+        }
+        return created > 0;
     }
 
     /**
