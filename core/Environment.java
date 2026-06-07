@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
 import entities.AbstractEntity;
 import entities.resources.Rock;
 
@@ -203,6 +202,30 @@ public class Environment {
         }
 
         return true;
+    }
+
+    /**
+     * Returns the entity located at exactly the given position, or null if none.
+     * @param pos the position to look up
+     * @return the entity at that position, or null
+     */
+    public AbstractEntity getEntityAt(Position pos) {
+        if (pos == null) {
+            return null;
+        }
+        for (AbstractEntity entity : this.entities) {
+            if (entity.getPosition().equals(pos)) {
+                return entity;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Removes all entities from the environment.
+     */
+    public void clearEntities() {
+        this.entities.clear();
     }
 
     /**

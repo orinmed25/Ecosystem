@@ -6,7 +6,6 @@ import interfaces.Consumable;
 /**
  * Student 1: Shir Yehudai 212712194
  * Student 2: Orin Medina 211564935
- *
  * Represents a water resource that can be consumed.
  */
 public class Water extends Resource implements Consumable {

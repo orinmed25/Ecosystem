@@ -6,7 +6,6 @@ import core.Position;
 /**
  * Student 1: Shir Yehudai 212712194
  * Student 2: Orin Medina 211564935
- *
  * Represents a flower in the ecosystem.
  */
 public class Flower extends Plant {

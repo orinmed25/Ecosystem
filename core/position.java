@@ -1,9 +1,8 @@
 package core;
 
 /**
- * Student 1: <FULL_NAME> <ID>
- * Student 2: <FULL_NAME> <ID>
- *
+ * Student 1: Shir Yehudai 212712194
+ * Student 2: Orin Medina 211564935
  * Represents a position on the 2D ecosystem map.
  */
 public class Position {
@@ -12,7 +11,6 @@ public class Position {
 
     /**
      * Creates a new position.
-     *
      * @param row the row index
      * @param col the column index
      */
@@ -23,7 +21,6 @@ public class Position {
 
     /**
      * Returns the row of this position.
-     *
      * @return the row value
      */
     public int getRow() {
@@ -32,7 +29,6 @@ public class Position {
 
     /**
      * Returns the column of this position.
-     *
      * @return the column value
      */
     public int getCol() {
@@ -41,7 +37,6 @@ public class Position {
 
     /**
      * Sets the row if the value is valid.
-     *
      * @param row the new row
      * @return true if the update succeeded, false otherwise
      */
@@ -55,7 +50,6 @@ public class Position {
 
     /**
      * Sets the column if the value is valid.
-     *
      * @param col the new column
      * @return true if the update succeeded, false otherwise
      */
@@ -69,7 +63,6 @@ public class Position {
 
     /**
      * Calculates the Manhattan distance between this position and another position.
-     *
      * @param other the other position
      * @return the Manhattan distance, or -1 if other is null
      */
@@ -82,7 +75,6 @@ public class Position {
 
     /**
      * Compares this position to another object.
-     *
      * @param o the object to compare to
      * @return true if both positions are equal, false otherwise
      */
@@ -100,7 +92,6 @@ public class Position {
 
     /**
      * Returns a string representation of this position.
-     *
      * @return the position as a string
      */
     @Override

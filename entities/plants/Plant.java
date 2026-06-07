@@ -10,11 +10,20 @@ import interfaces.Reproducible;
 /**
  * Student 1: Shir Yehudai 212712194
  * Student 2: Orin Medina 211564935
- * Abstract base class for all plant entities in the ecosystem.
+ * Plant entity in the ecosystem - can be a generic plant or subclassed (Flower, OakTree).
+ * Implements growth, energy management, and reproduction behaviors.
  */
-public abstract class Plant extends LivingEntity implements Consumable, Reproducible, EdibleByHerbivore {
+public class Plant extends LivingEntity implements Consumable, Reproducible, EdibleByHerbivore {
     private double growthRate;
     private double reproductionChance;
+
+    /**
+     * Creates a new plant with default parameters.
+     * @param position the plant position
+     */
+    public Plant(Position position) {
+        this(position, 'P', 40, 40, 2.0, 0.3);
+    }
 
     /**
      * Creates a new plant.
@@ -103,6 +112,48 @@ public abstract class Plant extends LivingEntity implements Consumable, Reproduc
     }
 
     /**
+     * Attempts to reproduce if conditions are met.
+     * Plants reproduce when energy is high enough and random chance succeeds.
+     * @param env the simulation environment
+     * @return true if reproduction attempt was made
+     */
+    @Override
+    public boolean reproduce(Environment env) {
+        if (env == null || !isAlive()) {
+            return false;
+        }
+
+       
+        if (getEnergy() >= getMaxEnergy() * 0.8 && Math.random() < this.reproductionChance) {
+            // Find a random free position
+            Position newPosition = null;
+            int attempts = 0;
+            while (newPosition == null && attempts < 10) {
+                int row = (int) (Math.random() * env.getRows());
+                int col = (int) (Math.random() * env.getCols());
+                Position candidate = new Position(row, col);
+                if (env.isPositionFree(candidate)) {
+                    newPosition = candidate;
+                }
+                attempts++;
+            }
+
+            
+            if (newPosition != null) {
+                Plant offspring = new Plant(newPosition, this.getSymbol(), getMaxEnergy() * 0.5, 
+                                           getMaxEnergy() * 0.5, this.growthRate, this.reproductionChance);
+                env.addEntity(offspring);
+                
+                
+                setEnergy(getEnergy() * 0.7);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Returns the nutritional value of the plant.
      * @return the plant energy
      */
@@ -150,3 +201,4 @@ public abstract class Plant extends LivingEntity implements Consumable, Reproduc
                 + "<" + isAlive() + ">";
     }
 }
+

@@ -1,17 +1,20 @@
 package core;
 
 import entities.AbstractEntity;
-import entities.animals.Animal;
-import entities.plants.Plant;
 import interfaces.Actable;
+import interfaces.EcosystemObserver;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Student 1: Shir Yehudai 212712194
  * Student 2: Orin Medina 211564935
- * Runs the ecosystem simulation.
+ * Runs the ecosystem simulation and notifies registered observers after each tick.
  */
 public class SimulationEngine {
     private Environment environment;
+    private List<EcosystemObserver> observers = new ArrayList<>();
+    private int tickCount = 0;
 
     /**
      * Creates a new simulation engine.
@@ -30,6 +33,14 @@ public class SimulationEngine {
     }
 
     /**
+     * Returns the number of ticks that have elapsed.
+     * @return the tick count
+     */
+    public int getTickCount() {
+        return tickCount;
+    }
+
+    /**
      * Sets the environment if valid.
      * @param environment the new environment
      * @return true if update succeeded, false otherwise
@@ -43,48 +54,58 @@ public class SimulationEngine {
     }
 
     /**
+     * Registers an observer to be notified after each world change.
+     * @param observer the observer to add
+     */
+    public void addObserver(EcosystemObserver observer) {
+        if (observer != null && !observers.contains(observer)) {
+            observers.add(observer);
+        }
+    }
+
+    /**
+     * Removes a previously registered observer.
+     * @param observer the observer to remove
+     */
+    public void removeObserver(EcosystemObserver observer) {
+        observers.remove(observer);
+    }
+
+    private void notifyObservers() {
+        for (EcosystemObserver obs : new ArrayList<>(observers)) {
+            obs.onWorldChanged(environment, tickCount);
+        }
+    }
+
+    /**
      * Runs one simulation tick.
-     * Activates all actable entities, removes dead entities, updates the world and prints the map and stats.
+     * Uses a snapshot of the entity list to avoid ConcurrentModificationException
+     * when entities reproduce or die during a tick.
      */
     public void tick() {
         if (this.environment == null) {
             return;
         }
 
-        for (AbstractEntity entity : this.environment.getEntities()) {
-            if (entity instanceof Actable) {
+        List<AbstractEntity> snapshot = new ArrayList<>(this.environment.getEntities());
+        for (AbstractEntity entity : snapshot) {
+            if (entity instanceof Actable && entity.isAlive()) {
                 ((Actable) entity).act(this.environment);
             }
         }
 
         this.environment.removeDeadEntities();
-        this.environment.printMap();
-        printStatistics();
+        tickCount++;
+        notifyObservers();
     }
 
     /**
-     * Prints basic simulation statistics.
+     * Resets the simulation by removing all entities and resetting the tick counter.
      */
-    private void printStatistics() {
-        int aliveCount = 0;
-        int animalCount = 0;
-        int plantCount = 0;
-
-        for (AbstractEntity entity : this.environment.getEntities()) {
-            if (entity.isAlive()) {
-                aliveCount++;
-            }
-            if (entity instanceof Animal) {
-                animalCount++;
-            }
-            if (entity instanceof Plant) {
-                plantCount++;
-            }
-        }
-
-        System.out.println("Alive entities: " + aliveCount);
-        System.out.println("Animals: " + animalCount);
-        System.out.println("Plants: " + plantCount);
+    public void reset() {
+        this.environment.clearEntities();
+        tickCount = 0;
+        notifyObservers();
     }
 
     /**

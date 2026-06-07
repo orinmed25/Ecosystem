@@ -1,0 +1,27 @@
+Background
+In this step, you will expand the ecosystem you built in the first part. The goal is to move the simulation
+from a textual environment to an interactive graphical interface based on the Swing library. You must implement the principles of
+Separation of Concerns (using advanced design patterns, and build a broad foundation
+for a future step that includes working with processes and asynchronous event management.
+Architectural Requirements MVC and Observer
+You must completely separate logic from display:
+ Model: The ecosystem classes from Part 1. The model does not hold any Swing components and does not "know"
+the graphics.
+ View: Responsible for all GUI components. The View is registered as an Observer of the model and is updated whenever
+there is a change in the world state (for example, after each tick).
+ Controller: Manages the interaction between the user and the model. Any button click or interaction
+with the map will go through it.
+GUI Requirements
+A. Map and Entity Display
+Visual Representation: Do not use textual characters or simple geometric shapes. Use JPG/PNG icons for each entity (predator, herbivore, plant).
+Resource Management: Loading images should be done efficiently (e.g. one-time loading into memory) from the project's resources folder.
+Dynamic Grid: The map will be displayed as a table/grid that matches the size of the defined Environment.
+B. Mouse Interaction
+Hover Effect: When the mouse cursor moves over a cell in the map, a Tooltip will be displayed that displays the output of the toString() method of the entity in that cell (type, energy, state).
+Selection: Clicking on a cell in the map will highlight it (e.g. by a bold colored frame). The full details of the selected entity will be displayed permanently In a dedicated information panel on the side of the screen.
+C. Simulation control and management panel
+Control buttons: The interface will include buttons for performing a single tick, continuous running, stopping and starting.
+Adding entities at runtime: Clicking the "Add Entity" button will open a customized dialog box (JDialog). In this dialog, the user will select the entity type, enter initial parameters (such as location and energy) and confirm the addition to the map.
+D. Statistics panel
+Displays live data on the state of the system: the number of entities of each type, the total amount of energy in the system, and the number of
+Ticks that have passed since the start of the simulation.

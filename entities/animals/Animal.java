@@ -14,9 +14,8 @@ import interfaces.Movable;
 import interfaces.Sensory;
 
 /**
- * Student 1: <FULL_NAME> <ID>
- * Student 2: <FULL_NAME> <ID>
- *
+ * Student 1: Shir Yehudai 212712194
+ * Student 2: Orin Medina 211564935
  * Abstract base class for all animal entities in the ecosystem.
  */
 public abstract class Animal extends LivingEntity
@@ -46,7 +45,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Returns the vision range.
-     *
      * @return the vision range
      */
     public int getVisionRange() {
@@ -55,7 +53,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Returns the movement strategy.
-     *
      * @return the movement strategy
      */
     public MovementStrategy getMovementStrategy() {
@@ -64,7 +61,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Returns the feeding behavior.
-     *
      * @return the feeding behavior
      */
     public FeedingBehavior getFeedingBehavior() {
@@ -73,7 +69,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Sets the vision range if valid.
-     *
      * @param visionRange the new vision range
      * @return true if update succeeded, false otherwise
      */
@@ -87,7 +82,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Sets the movement strategy if valid.
-     *
      * @param movementStrategy the new movement strategy
      * @return true if update succeeded, false otherwise
      */
@@ -101,7 +95,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Sets the feeding behavior if valid.
-     *
      * @param feedingBehavior the new feeding behavior
      * @return true if update succeeded, false otherwise
      */
@@ -116,7 +109,6 @@ public abstract class Animal extends LivingEntity
     /**
      * Performs one animal action in the current tick.
      * The action order is: basic update, sense, move, and attempt eating.
-     *
      * @param env the simulation environment
      * @return true if the action completed, false otherwise
      */
@@ -149,7 +141,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Attempts to move the animal using its movement strategy.
-     *
      * @param env the simulation environment
      * @return true if movement succeeded, false otherwise
      */
@@ -163,7 +154,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Attempts to eat a consumable target.
-     *
      * @param target the target to consume
      * @return true if eating succeeded, false otherwise
      */
@@ -188,7 +178,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Returns nearby entities from the environment.
-     *
      * @param env the simulation environment
      * @return a list of nearby entities
      */
@@ -199,7 +188,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Returns the nutrition value of this animal.
-     *
      * @return 80 percent of the current energy
      */
     @Override
@@ -209,7 +197,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Defines what happens when the animal is consumed.
-     *
      * @return true if the update succeeded
      */
     @Override
@@ -219,7 +206,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Compares this animal to another object.
-     *
      * @param o the object to compare
      * @return true if equal, false otherwise
      */
@@ -237,7 +223,6 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Returns a string representation of the animal.
-     *
      * @return the string representation
      */
     @Override
@@ -249,7 +234,6 @@ public abstract class Animal extends LivingEntity
     }
     /**
  * Moves the animal to a new position if valid.
- *
  * @param newPosition the new position
  * @return true if update succeeded, false otherwise
  */
