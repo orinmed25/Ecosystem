@@ -11,7 +11,7 @@ import interfaces.Actable;
  */
 public abstract class LivingEntity extends AbstractEntity implements Actable {
     private int age;
-    private double energy;
+    private volatile double energy;
     private double maxEnergy;
 
     /**

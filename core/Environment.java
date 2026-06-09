@@ -1,21 +1,36 @@
 package core;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import entities.AbstractEntity;
-import entities.resources.Rock;
+import entities.animals.Animal;
+import interfaces.EntityLifecycleListener;
 
 /**
  * Student 1: Shir Yehudai 212712194
  * Student 2: Orin Medina 211564935
  * Represents the ecosystem world and manages all entities in it.
+ *
+ * Thread-safety: the shared entity list is guarded by a single {@link ReentrantLock}.
+ * The lock is held only for the duration of each short operation (a scan, an add, a move),
+ * never across an entity's whole turn or while it sleeps, so entity threads run concurrently
+ * and only briefly contend on the quick critical sections.
  */
 public class Environment {
     private int rows;
     private int cols;
-    private List<AbstractEntity> entities;
+    private final List<AbstractEntity> entities;
+
+    /** Guards every access to {@link #entities}. */
+    private final ReentrantLock lock = new ReentrantLock();
+    /** Condition signalled whenever a new entity (a potential resource) is added. */
+    private final Condition resourceAvailable = lock.newCondition();
+    /** Optional listener notified when entities are added/removed (the engine). */
+    private volatile EntityLifecycleListener lifecycleListener;
 
     /**
      * Creates a new environment.
@@ -45,11 +60,25 @@ public class Environment {
     }
 
     /**
-     * Returns an unmodifiable view of the entities list.
-     * @return the entities list
+     * Registers the listener notified on entity add/remove. Pass null to clear.
+     * @param listener the lifecycle listener
+     */
+    public void setLifecycleListener(EntityLifecycleListener listener) {
+        this.lifecycleListener = listener;
+    }
+
+    /**
+     * Returns a snapshot copy of the current entities. The copy is safe to iterate
+     * from any thread (including the GUI) while other threads modify the world.
+     * @return a snapshot list of the entities
      */
     public List<AbstractEntity> getEntities() {
-        return Collections.unmodifiableList(this.entities);
+        lock.lock();
+        try {
+            return new ArrayList<>(this.entities);
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -79,30 +108,63 @@ public class Environment {
     }
 
     /**
-     * Checks whether a position is free.
-     * A position is free if it is inside the map and has no entity or blocking rock.
+     * Checks whether a position is free (inside the map and unoccupied), without locking.
+     * Must be called while holding {@link #lock}.
      * @param next the position to check
      * @return true if the position is free, false otherwise
      */
-    public boolean isPositionFree(core.Position next) {
+    private boolean isFreeNoLock(Position next) {
         if (next == null) {
             return false;
         }
-
-        if (next.getRow() < 0 || next.getRow() >= this.rows || next.getCol() < 0 || next.getCol() >= this.cols) {
+        if (next.getRow() < 0 || next.getRow() >= this.rows
+                || next.getCol() < 0 || next.getCol() >= this.cols) {
             return false;
         }
-
         for (AbstractEntity entity : this.entities) {
             if (entity.getPosition().equals(next)) {
                 return false;
             }
-            if (entity instanceof Rock && entity.getPosition().equals(next)) {
+        }
+        return true;
+    }
+
+    /**
+     * Checks whether a position is free.
+     * A position is free if it is inside the map and has no entity occupying it.
+     * @param next the position to check
+     * @return true if the position is free, false otherwise
+     */
+    public boolean isPositionFree(Position next) {
+        lock.lock();
+        try {
+            return isFreeNoLock(next);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Atomically moves the animal to the target cell if it is free.
+     * The free-check and the move happen in one critical section, so two animals
+     * can never end up on the same cell.
+     * @param animal the animal to move
+     * @param target the destination position
+     * @return true if the animal was moved, false otherwise
+     */
+    public boolean tryMove(Animal animal, Position target) {
+        if (animal == null) {
+            return false;
+        }
+        lock.lock();
+        try {
+            if (!isFreeNoLock(target)) {
                 return false;
             }
+            return animal.moveTo(target);
+        } finally {
+            lock.unlock();
         }
-
-        return true;
     }
 
     /**
@@ -110,24 +172,28 @@ public class Environment {
      * @param pos the center position
      * @return a list of nearby entities
      */
-    public List<AbstractEntity> getNearbyEntities(core.Position pos) {
+    public List<AbstractEntity> getNearbyEntities(Position pos) {
         List<AbstractEntity> nearby = new ArrayList<>();
-
         if (pos == null) {
             return nearby;
         }
-
-        for (AbstractEntity entity : this.entities) {
-            if (entity.getPosition().distanceTo(pos) <= 2) {
-                nearby.add(entity);
+        lock.lock();
+        try {
+            for (AbstractEntity entity : this.entities) {
+                if (entity.getPosition().distanceTo(pos) <= 2) {
+                    nearby.add(entity);
+                }
             }
+        } finally {
+            lock.unlock();
         }
-
         return nearby;
     }
 
     /**
-     * Adds an entity to the environment if possible.
+     * Adds an entity to the environment if its cell is free.
+     * On success, wakes any threads waiting for a resource and notifies the lifecycle
+     * listener (outside the lock, so thread creation never happens while locked).
      * @param entity the entity to add
      * @return true if the add succeeded, false otherwise
      */
@@ -135,12 +201,21 @@ public class Environment {
         if (entity == null || entity.getPosition() == null) {
             return false;
         }
-
-        if (!isPositionFree(entity.getPosition())) {
-            return false;
+        lock.lock();
+        try {
+            if (!isFreeNoLock(entity.getPosition())) {
+                return false;
+            }
+            this.entities.add(entity);
+            resourceAvailable.signalAll();
+        } finally {
+            lock.unlock();
         }
-
-        return this.entities.add(entity);
+        EntityLifecycleListener l = this.lifecycleListener;
+        if (l != null) {
+            l.onEntityAdded(entity);
+        }
+        return true;
     }
 
     /**
@@ -152,56 +227,79 @@ public class Environment {
         if (entity == null) {
             return false;
         }
-        return this.entities.remove(entity);
+        boolean removed;
+        lock.lock();
+        try {
+            removed = this.entities.remove(entity);
+        } finally {
+            lock.unlock();
+        }
+        EntityLifecycleListener l = this.lifecycleListener;
+        if (removed && l != null) {
+            l.onEntityRemoved(entity);
+        }
+        return removed;
     }
 
     /**
      * Removes all dead entities from the environment.
-     * @return true if the cleanup completed
+     * @return true if any entity was removed
      */
     public boolean removeDeadEntities() {
-        boolean changed = false;
-        Iterator<AbstractEntity> iterator = this.entities.iterator();
-
-        while (iterator.hasNext()) {
-            AbstractEntity entity = iterator.next();
-            if (!entity.isAlive()) {
-                iterator.remove();
-                changed = true;
+        List<AbstractEntity> removed = new ArrayList<>();
+        lock.lock();
+        try {
+            Iterator<AbstractEntity> iterator = this.entities.iterator();
+            while (iterator.hasNext()) {
+                AbstractEntity entity = iterator.next();
+                if (!entity.isAlive()) {
+                    iterator.remove();
+                    removed.add(entity);
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+        EntityLifecycleListener l = this.lifecycleListener;
+        if (l != null) {
+            for (AbstractEntity entity : removed) {
+                l.onEntityRemoved(entity);
             }
         }
-
-        return changed;
+        return !removed.isEmpty();
     }
 
     /**
-     * Prints the current map using entity symbols.
-     * @return true if printing completed
+     * Causes the calling thread to wait until a new resource (entity) is added to the
+     * world, or until the timeout elapses. Used by hungry animals to avoid busy-waiting.
+     * The lock is released while waiting, so the rest of the simulation proceeds.
+     * @param timeoutMillis the maximum time to wait, in milliseconds
      */
-    public boolean printMap() {
-        char[][] map = new char[this.rows][this.cols];
-
-        for (int i = 0; i < this.rows; i++) {
-            for (int j = 0; j < this.cols; j++) {
-                map[i][j] = ' ';
-            }
+    public void awaitResource(long timeoutMillis) {
+        if (!(Thread.currentThread() instanceof EntityThread)) {
+            return;
         }
-
-        for (AbstractEntity entity : this.entities) {
-            Position pos = entity.getPosition();
-            if (pos.getRow() >= 0 && pos.getRow() < this.rows && pos.getCol() >= 0 && pos.getCol() < this.cols) {
-                map[pos.getRow()][pos.getCol()] = entity.getSymbol();
-            }
+        lock.lock();
+        try {
+            resourceAvailable.await(timeoutMillis, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            lock.unlock();
         }
+    }
 
-        for (int i = 0; i < this.rows; i++) {
-            for (int j = 0; j < this.cols; j++) {
-                System.out.print("[" + map[i][j] + "]");
-            }
-            System.out.println();
+    /**
+     * Wakes every thread currently waiting in {@link #awaitResource(long)}.
+     * Used on shutdown/reset so waiting threads can exit promptly.
+     */
+    public void signalAllWaiters() {
+        lock.lock();
+        try {
+            resourceAvailable.signalAll();
+        } finally {
+            lock.unlock();
         }
-
-        return true;
     }
 
     /**
@@ -213,19 +311,64 @@ public class Environment {
         if (pos == null) {
             return null;
         }
-        for (AbstractEntity entity : this.entities) {
-            if (entity.getPosition().equals(pos)) {
-                return entity;
+        lock.lock();
+        try {
+            for (AbstractEntity entity : this.entities) {
+                if (entity.getPosition().equals(pos)) {
+                    return entity;
+                }
             }
+            return null;
+        } finally {
+            lock.unlock();
         }
-        return null;
     }
 
     /**
-     * Removes all entities from the environment.
+     * Removes all entities from the environment and wakes any waiting threads.
      */
     public void clearEntities() {
-        this.entities.clear();
+        lock.lock();
+        try {
+            this.entities.clear();
+            resourceAvailable.signalAll();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Prints the current map using entity symbols.
+     * @return true if printing completed
+     */
+    public boolean printMap() {
+        char[][] map = new char[this.rows][this.cols];
+        for (int i = 0; i < this.rows; i++) {
+            for (int j = 0; j < this.cols; j++) {
+                map[i][j] = ' ';
+            }
+        }
+
+        lock.lock();
+        try {
+            for (AbstractEntity entity : this.entities) {
+                Position pos = entity.getPosition();
+                if (pos.getRow() >= 0 && pos.getRow() < this.rows
+                        && pos.getCol() >= 0 && pos.getCol() < this.cols) {
+                    map[pos.getRow()][pos.getCol()] = entity.getSymbol();
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+
+        for (int i = 0; i < this.rows; i++) {
+            for (int j = 0; j < this.cols; j++) {
+                System.out.print("[" + map[i][j] + "]");
+            }
+            System.out.println();
+        }
+        return true;
     }
 
     /**
@@ -244,7 +387,7 @@ public class Environment {
         Environment other = (Environment) o;
         return this.rows == other.rows
                 && this.cols == other.cols
-                && this.entities.equals(other.entities);
+                && this.getEntities().equals(other.getEntities());
     }
 
     /**
@@ -253,7 +396,12 @@ public class Environment {
      */
     @Override
     public String toString() {
-        return "Environment <rows=" + this.rows + ", cols=" + this.cols
-                + ", entities=" + this.entities.size() + ">";
+        lock.lock();
+        try {
+            return "Environment <rows=" + this.rows + ", cols=" + this.cols
+                    + ", entities=" + this.entities.size() + ">";
+        } finally {
+            lock.unlock();
+        }
     }
 }

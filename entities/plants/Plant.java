@@ -143,10 +143,15 @@ public abstract class Plant extends LivingEntity implements Consumable, Reproduc
 
     /**
      * Defines what happens when the plant is consumed.
-     * @return true if the update succeeded
+     * Synchronized and one-shot: only the first caller succeeds, so two herbivores can
+     * never both consume the same plant.
+     * @return true if this call consumed the plant, false if it was already consumed
      */
     @Override
-    public boolean onConsumed() {
+    public synchronized boolean onConsumed() {
+        if (!isAlive()) {
+            return false;
+        }
         return setAlive(false);
     }
 

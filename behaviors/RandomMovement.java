@@ -37,8 +37,8 @@ public class RandomMovement implements MovementStrategy {
         Collections.shuffle(candidates);
 
         for (Position candidate : candidates) {
-            if (env.isPositionFree(candidate)) {
-                return animal.moveTo(candidate);
+            if (env.tryMove(animal, candidate)) {
+                return true;
             }
         }
 

@@ -63,10 +63,7 @@ public class EscapeMovement implements MovementStrategy {
 
         Position next = new Position(newRow, newCol);
 
-        if (!env.isPositionFree(next)) {
-            return false;
-        }
-
-        return animal.moveTo(next);
+        
+        return env.tryMove(animal, next);
     }
 }

@@ -72,10 +72,6 @@ public class Rabbit extends Animal implements Reproducible {
             return false;
         }
 
-        // Reproduction splits the parent's energy with the offspring (energy is
-        // conserved). This makes the energy>30 threshold meaningful: after breeding
-        // the parent drops below it and must eat again before reproducing, so the
-        // population stays bounded by the available food.
         double shared = getEnergy() / 2;
         offspring.setEnergy(shared);
         setEnergy(shared);

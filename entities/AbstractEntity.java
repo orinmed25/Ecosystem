@@ -9,9 +9,9 @@ import core.Position;
  * Base abstract class for all entities in the ecosystem.
  */
 public abstract class AbstractEntity {
-    private Position position;
+    private volatile Position position;
     private char symbol;
-    private boolean alive;
+    private volatile boolean alive;
 
     /**
      * Creates a new entity.

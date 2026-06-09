@@ -38,8 +38,10 @@ public class EcoPanel extends JPanel {
     private SelectionListener selectionListener;
 
     private static final int GRID_OFFSET = 5;
-    private static final int PREFERRED_CELL = 45;
+    private static final int PREFERRED_CELL = 56;
     private int cellSize = PREFERRED_CELL;
+    private int originX = GRID_OFFSET;
+    private int originY = GRID_OFFSET;
 
     public EcoPanel(Environment environment) {
         this.environment = environment;
@@ -122,14 +124,19 @@ public class EcoPanel extends JPanel {
         int cw = w / environment.getCols();
         int ch = h / environment.getRows();
         cellSize = Math.max(20, Math.min(cw, ch));
+        originX = Math.max(GRID_OFFSET, (getWidth() - environment.getCols() * cellSize) / 2);
+        originY = Math.max(GRID_OFFSET, (getHeight() - environment.getRows() * cellSize) / 2);
     }
 
     /** 
      * Converts a pixel coordinate to a grid Position, or null if outside the grid. 
      */
     private Position pixelToGrid(int x, int y) {
-        int col = (x - GRID_OFFSET) / cellSize;
-        int row = (y - GRID_OFFSET) / cellSize;
+        if (x < originX || y < originY) {
+            return null;
+        }
+        int col = (x - originX) / cellSize;
+        int row = (y - originY) / cellSize;
         if (row < 0 || row >= environment.getRows() || col < 0 || col >= environment.getCols()) {
             return null;
         }
@@ -192,8 +199,8 @@ public class EcoPanel extends JPanel {
 
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
-                int x = GRID_OFFSET + c * cellSize;
-                int y = GRID_OFFSET + r * cellSize;
+                int x = originX + c * cellSize;
+                int y = originY + r * cellSize;
                 g2d.setColor((r + c) % 2 == 0 ? new Color(40, 100, 40) : new Color(50, 120, 50));
                 g2d.fillRect(x, y, cellSize, cellSize);
             }
@@ -202,12 +209,12 @@ public class EcoPanel extends JPanel {
         g2d.setColor(new Color(0, 0, 0, 80));
         g2d.setStroke(new BasicStroke(1));
         for (int c = 0; c <= cols; c++) {
-            int x = GRID_OFFSET + c * cellSize;
-            g2d.drawLine(x, GRID_OFFSET, x, GRID_OFFSET + rows * cellSize);
+            int x = originX + c * cellSize;
+            g2d.drawLine(x, originY, x, originY + rows * cellSize);
         }
         for (int r = 0; r <= rows; r++) {
-            int y = GRID_OFFSET + r * cellSize;
-            g2d.drawLine(GRID_OFFSET, y, GRID_OFFSET + cols * cellSize, y);
+            int y = originY + r * cellSize;
+            g2d.drawLine(originX, y, originX + cols * cellSize, y);
         }
     }
 
@@ -220,8 +227,8 @@ public class EcoPanel extends JPanel {
                 continue;
             }
 
-            int x = GRID_OFFSET + pos.getCol() * cellSize;
-            int y = GRID_OFFSET + pos.getRow() * cellSize;
+            int x = originX + pos.getCol() * cellSize;
+            int y = originY + pos.getRow() * cellSize;
             int pad = Math.max(2, cellSize / 10);
             int iconSize = cellSize - pad * 2;
 

@@ -2,6 +2,7 @@ package gui;
 
 import entities.AbstractEntity;
 import entities.LivingEntity;
+import entities.animals.Animal;
 
 import javax.swing.*;
 import java.awt.*;
@@ -28,6 +29,11 @@ public class EntityInfoPanel extends JPanel {
      * Label displaying the selected entity alive/dead status.
      */
     private final JLabel statusLabel;
+
+    /**
+     * Label displaying whether the selected animal is active or waiting for food.
+     */
+    private final JLabel stateLabel;
 
     /**
      * Label displaying the selected entity age.
@@ -74,6 +80,7 @@ public class EntityInfoPanel extends JPanel {
         typeLabel     = field("Type: —");
         positionLabel = field("Position: —");
         statusLabel   = field("Status: —");
+        stateLabel    = field("Activity: —");
         ageLabel      = field("Age: —");
         energyLabel   = field("Energy: —");
 
@@ -102,6 +109,8 @@ public class EntityInfoPanel extends JPanel {
         content.add(positionLabel);
         content.add(gap(4));
         content.add(statusLabel);
+        content.add(gap(4));
+        content.add(stateLabel);
         content.add(gap(4));
         content.add(ageLabel);
         content.add(gap(8));
@@ -162,6 +171,8 @@ public class EntityInfoPanel extends JPanel {
             typeLabel.setText("Type: —");
             positionLabel.setText("Position: —");
             statusLabel.setText("Status: —");
+            stateLabel.setText("Activity: —");
+            stateLabel.setForeground(Color.BLACK);
             ageLabel.setText("Age: —");
             energyLabel.setText("Energy: —");
             energyBar.setValue(0);
@@ -174,6 +185,17 @@ public class EntityInfoPanel extends JPanel {
         positionLabel.setText("Position: " + entity.getPosition());
         statusLabel.setText("Status: " + (entity.isAlive() ? "Alive" : "Dead"));
         toStringArea.setText(entity.toString());
+
+        if (entity instanceof Animal && ((Animal) entity).isWaiting()) {
+            stateLabel.setText("Activity: Waiting for food");
+            stateLabel.setForeground(new Color(200, 120, 0));
+        } else if (entity instanceof Animal) {
+            stateLabel.setText("Activity: Active");
+            stateLabel.setForeground(new Color(0, 150, 0));
+        } else {
+            stateLabel.setText("Activity: —");
+            stateLabel.setForeground(Color.BLACK);
+        }
 
         if (entity instanceof LivingEntity) {
             LivingEntity le = (LivingEntity) entity;

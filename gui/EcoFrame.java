@@ -38,11 +38,6 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
     private static final int ENV_COLS = 9;
 
     /**
-     * Delay in milliseconds between automatic simulation ticks.
-     */
-    private static final int AUTO_TICK_MS = 600;
-
-    /**
      * The ecosystem environment displayed in the frame.
      */
     private final Environment environment;
@@ -98,9 +93,10 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
     private JLabel energyLabel;
 
     /**
-     * Timer used for automatic simulation progression.
+     * Guards against flooding the event thread: at most one UI refresh is queued at a time.
      */
-    private final Timer autoTimer;
+    private final java.util.concurrent.atomic.AtomicBoolean uiUpdatePending =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
 
     /**
      * Button used to start continuous simulation.
@@ -137,7 +133,13 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
         add(infoPanel, BorderLayout.EAST);
         add(buildBottomPanel(), BorderLayout.SOUTH);
 
-        autoTimer = new Timer(AUTO_TICK_MS, e -> engine.tick());
+        
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                engine.shutdown();
+            }
+        });
 
         updateStats();
         pack();
@@ -212,14 +214,14 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
         panel.setOpaque(false);
 
         JButton stepButton = styledButton("Step", new Color(70, 130, 180));
-        playButton = styledButton("▶  Play", new Color(50, 160, 50));
-        pauseButton = styledButton("⏸  Pause", new Color(200, 140, 0));
-        JButton addButton = styledButton("＋ Add Entity", new Color(130, 60, 160));
-        JButton resetButton = styledButton("⟲  Reset", new Color(180, 60, 60));
+        playButton = styledButton("Play", new Color(50, 160, 50));
+        pauseButton = styledButton("Pause", new Color(200, 140, 0));
+        JButton addButton = styledButton("Add Entity", new Color(130, 60, 160));
+        JButton resetButton = styledButton("Reset", new Color(180, 60, 60));
 
         pauseButton.setEnabled(false);
 
-        stepButton.addActionListener(e -> engine.tick());
+        stepButton.addActionListener(e -> engine.step());
         playButton.addActionListener(e -> doPlay());
         pauseButton.addActionListener(e -> doPause());
         addButton.addActionListener(e -> doAddEntity());
@@ -239,7 +241,7 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
      * @return the statistics panel
      */
     private JPanel buildStatsPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 2));
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 2));
         panel.setOpaque(false);
 
         tickLabel = statLabel("Tick: 0");
@@ -247,8 +249,8 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
         deerLabel = statLabel("Deer: 0");
         rabbitLabel = statLabel("Rabbits: 0");
         flowerLabel = statLabel("Flowers: 0");
-        oakLabel = statLabel("OakTrees: 0");
-        energyLabel = statLabel("Total Energy: 0");
+        oakLabel = statLabel("Oaks: 0");
+        energyLabel = statLabel("Energy: 0");
 
         panel.add(tickLabel);
         panel.add(divider());
@@ -277,6 +279,7 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
         btn.setBorderPainted(false);
         btn.setOpaque(true);
         btn.setFont(new Font("Arial", Font.BOLD, 12));
+        btn.setBorder(BorderFactory.createEmptyBorder(7, 16, 7, 16));
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return btn;
     }
@@ -289,7 +292,7 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
     private JLabel statLabel(String text) {
         JLabel lbl = new JLabel(text);
         lbl.setForeground(Color.WHITE);
-        lbl.setFont(new Font("Arial", Font.PLAIN, 12));
+        lbl.setFont(new Font("Arial", Font.PLAIN, 11));
         return lbl;
     }
 
@@ -309,14 +312,14 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
     private void doPlay() {
         playButton.setEnabled(false);
         pauseButton.setEnabled(true);
-        autoTimer.start();
+        engine.start();
     }
 
     /**
      * Pauses continuous automatic simulation updates.
      */
     private void doPause() {
-        autoTimer.stop();
+        engine.stop();
         playButton.setEnabled(true);
         pauseButton.setEnabled(false);
     }
@@ -351,10 +354,17 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
      */
     @Override
     public void onWorldChanged(Environment env, int tickCount) {
-        SwingUtilities.invokeLater(() -> {
-            updateStats();
-            ecoPanel.refresh();
-        });
+            if (uiUpdatePending.compareAndSet(false, true)) {
+            SwingUtilities.invokeLater(() -> {
+                uiUpdatePending.set(false);
+                updateStats();
+                ecoPanel.refresh();
+                AbstractEntity selected = ecoPanel.getSelectedEntity();
+                if (selected != null) {
+                    infoPanel.showEntity(selected);
+                }
+            });
+        }
     }
 
     /**
@@ -382,8 +392,8 @@ public class EcoFrame extends JFrame implements EcosystemObserver {
         deerLabel.setText("Deer: " + deer);
         rabbitLabel.setText("Rabbits: " + rabbits);
         flowerLabel.setText("Flowers: " + flowers);
-        oakLabel.setText("OakTrees: " + oaks);
-        energyLabel.setText(String.format("Total Energy: %.0f", totalEnergy));
+        oakLabel.setText("Oaks: " + oaks);
+        energyLabel.setText(String.format("Energy: %.0f", totalEnergy));
     }
 
     /**

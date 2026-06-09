@@ -25,6 +25,12 @@ public abstract class Animal extends LivingEntity
     private MovementStrategy movementStrategy;
     private FeedingBehavior feedingBehavior;
 
+    /** Maximum time (ms) a hungry animal parks itself waiting for a resource to appear. */
+    private static final long FOOD_WAIT_MS = 1000;
+
+    /** True while the animal is parked waiting for food (read by other threads / the GUI). */
+    private volatile boolean waiting = false;
+
     /**
      * Creates a new animal.
      *
@@ -129,14 +135,57 @@ public abstract class Animal extends LivingEntity
         List<AbstractEntity> nearby = sense(env);
 
         if (!move(env)) {
-            // movement failure does not stop the tick logic
         }
 
+        boolean ate = false;
         if (this.feedingBehavior != null) {
-            this.feedingBehavior.eat(this, nearby);
+            ate = this.feedingBehavior.eat(this, nearby);
+        }
+        if (ate) {
+            setWaiting(false);
+        } else if (isHungry()) {
+            setWaiting(true);
+            env.awaitResource(FOOD_WAIT_MS);
+        } else {
+            setWaiting(false);
         }
 
         return true;
+    }
+
+    /**
+     * Returns whether the animal is hungry (below half of its maximum energy).
+     * @return true if hungry, false otherwise
+     */
+    public boolean isHungry() {
+        return getEnergy() < getMaxEnergy() * 0.5;
+    }
+
+    /**
+     * Returns whether the animal is currently in the waiting state (parked, no food found).
+     * @return true if waiting, false otherwise
+     */
+    public boolean isWaiting() {
+        return this.waiting;
+    }
+
+    /**
+     * Updates the waiting state and logs the transition to the console so the wait state is
+     * observable while the simulation runs. Only state changes are logged, to avoid spam.
+     * @param value the new waiting state
+     */
+    private void setWaiting(boolean value) {
+        if (value == this.waiting) {
+            return;
+        }
+        this.waiting = value;
+        if (value) {
+            System.out.printf("[WAIT] %s at %s entered WAIT state (no food, energy=%.1f)%n",
+                    getClass().getSimpleName(), getPosition(), getEnergy());
+        } else {
+            System.out.printf("[WAIT] %s at %s left WAIT state (energy=%.1f)%n",
+                    getClass().getSimpleName(), getPosition(), getEnergy());
+        }
     }
 
     /**
@@ -197,10 +246,15 @@ public abstract class Animal extends LivingEntity
 
     /**
      * Defines what happens when the animal is consumed.
-     * @return true if the update succeeded
+     * Synchronized and one-shot: only the first caller succeeds, so two predators can
+     * never both consume the same prey (prevents duplicated energy).
+     * @return true if this call consumed the animal, false if it was already consumed
      */
     @Override
-    public boolean onConsumed() {
+    public synchronized boolean onConsumed() {
+        if (!isAlive()) {
+            return false;
+        }
         return setAlive(false);
     }
 
